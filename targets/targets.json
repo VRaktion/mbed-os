@@ -4998,6 +4998,16 @@
         "release_versions": ["5"],
         "device_name": "nRF52832_xxAA"
     },
+    "VRAKTION_ELTEN": {
+        "inherits": ["MCU_NRF52832"],
+        "release_versions": ["5"],
+        "device_name": "nRF52832_xxAA"
+    },
+    "VRAKTION_ELTEN2": {
+        "inherits": ["MCU_NRF52832"],
+        "release_versions": ["5"],
+        "device_name": "nRF52832_xxAA"
+    },
     "NRF51822_Y5_MBUG": {
         "inherits": ["MCU_NRF51_16K"]
     },
