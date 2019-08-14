@@ -20,7 +20,6 @@
 #include "AT_CellularStack.h"
 #include "AT_CellularDevice.h"
 #include "CellularLog.h"
-#include "CellularUtil.h"
 #if (DEVICE_SERIAL && DEVICE_INTERRUPTIN) || defined(DOXYGEN_ONLY)
 #include "UARTSerial.h"
 #endif // #if DEVICE_SERIAL
@@ -239,6 +238,16 @@ const char *AT_CellularContext::get_ip_address()
 #endif
 }
 
+char *AT_CellularContext::get_interface_name(char *interface_name)
+{
+    if (_cid < 0) {
+        return NULL;
+    }
+    MBED_ASSERT(interface_name);
+    sprintf(interface_name, "ce%02d", _cid);
+    return interface_name;
+}
+
 void AT_CellularContext::attach(Callback<void(nsapi_event_t, intptr_t)> status_cb)
 {
     _status_cb = status_cb;
@@ -279,23 +288,6 @@ void AT_CellularContext::set_credentials(const char *apn, const char *uname, con
     _apn = apn;
     _uname = uname;
     _pwd = pwd;
-}
-
-pdp_type_t AT_CellularContext::string_to_pdp_type(const char *pdp_type_str)
-{
-    pdp_type_t pdp_type = DEFAULT_PDP_TYPE;
-    int len = strlen(pdp_type_str);
-
-    if (len == 6 && memcmp(pdp_type_str, "IPV4V6", len) == 0) {
-        pdp_type = IPV4V6_PDP_TYPE;
-    } else if (len == 4 && memcmp(pdp_type_str, "IPV6", len) == 0) {
-        pdp_type = IPV6_PDP_TYPE;
-    } else if (len == 2 && memcmp(pdp_type_str, "IP", len) == 0) {
-        pdp_type = IPV4_PDP_TYPE;
-    } else if (len == 6 && memcmp(pdp_type_str, "Non-IP", len) == 0) {
-        pdp_type = NON_IP_PDP_TYPE;
-    }
-    return pdp_type;
 }
 
 // PDP Context handling
@@ -451,7 +443,30 @@ nsapi_error_t AT_CellularContext::do_activate_context()
 
 nsapi_error_t AT_CellularContext::activate_ip_context()
 {
-    return find_and_activate_context();
+    nsapi_error_t ret = find_and_activate_context();
+#if !NSAPI_PPP_AVAILABLE
+    if (ret == NSAPI_ERROR_OK) {
+        pdpContextList_t params_list;
+        if (get_pdpcontext_params(params_list) == NSAPI_ERROR_OK) {
+            pdpcontext_params_t *pdp = params_list.get_head();
+            while (pdp) {
+                SocketAddress addr;
+                if (addr.set_ip_address(pdp->dns_secondary_addr)) {
+                    tr_info("DNS secondary %s", pdp->dns_secondary_addr);
+                    char ifn[5]; // "ce" + two digit _cid + zero
+                    add_dns_server(addr, get_interface_name(ifn));
+                }
+                if (addr.set_ip_address(pdp->dns_primary_addr)) {
+                    tr_info("DNS primary %s", pdp->dns_primary_addr);
+                    char ifn[5]; // "ce" + two digit _cid + zero
+                    add_dns_server(addr, get_interface_name(ifn));
+                }
+                pdp = pdp->next;
+            }
+        }
+    }
+#endif
+    return ret;
 }
 
 nsapi_error_t AT_CellularContext::activate_non_ip_context()
