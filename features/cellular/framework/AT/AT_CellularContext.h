@@ -114,7 +114,7 @@ private:
     nsapi_error_t find_and_activate_context();
     nsapi_error_t activate_ip_context();
     void check_and_deactivate_context();
-    nsapi_error_t delete_current_context();
+    void delete_current_context();
     nsapi_error_t check_operation(nsapi_error_t err, ContextOperation op);
     void ciot_opt_cb(mbed::CellularNetwork::CIoT_Supported_Opt ciot_opt);
     virtual void do_connect_with_retry();
@@ -130,10 +130,6 @@ protected:
     char _found_apn[MAX_APN_LENGTH];
     // flag indicating if CP was requested to be setup
     bool _cp_req;
-    // flag indicating if Non-IP context was requested to be setup
-    bool _nonip_req;
-    // tells if CCIOTOPTI received green from network for CP optimization use
-    bool _cp_in_use;
 };
 
 } // namespace mbed

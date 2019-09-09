@@ -47,10 +47,10 @@ using namespace mbed;
 using namespace rtos;
 
 AT_CellularContext::AT_CellularContext(ATHandler &at, CellularDevice *device, const char *apn, bool cp_req, bool nonip_req) :
-    AT_CellularBase(at), _is_connected(false), _current_op(OP_INVALID), _fh(0), _cp_req(cp_req),
-    _nonip_req(nonip_req), _cp_in_use(false)
+    AT_CellularBase(at), _is_connected(false), _current_op(OP_INVALID), _fh(0), _cp_req(cp_req)
 {
     tr_info("New CellularContext %s (%p)", apn ? apn : "", this);
+    _nonip_req = nonip_req;
     _apn = apn;
     _device = device;
 }
@@ -291,7 +291,7 @@ void AT_CellularContext::set_credentials(const char *apn, const char *uname, con
 }
 
 // PDP Context handling
-nsapi_error_t AT_CellularContext::delete_current_context()
+void AT_CellularContext::delete_current_context()
 {
     tr_info("Delete context %d", _cid);
     _at.clear_error();
@@ -303,7 +303,8 @@ nsapi_error_t AT_CellularContext::delete_current_context()
         _new_context_set = false;
     }
 
-    return _at.get_last_error();
+    // there is nothing we can do if deleting of context fails. No point reporting an error (for example disconnect).
+    _at.clear_error();
 }
 
 nsapi_error_t AT_CellularContext::do_user_authentication()
@@ -569,7 +570,6 @@ void AT_CellularContext::do_connect()
     }
 #else
     _is_connected = true;
-    call_network_cb(NSAPI_STATUS_GLOBAL_UP);
 #endif
 }
 
@@ -608,6 +608,7 @@ nsapi_error_t AT_CellularContext::open_data_channel()
                   connected, or timeout after 30 seconds*/
     nsapi_error_t err = nsapi_ppp_connect(_at.get_file_handle(), callback(this, &AT_CellularContext::ppp_status_cb), _uname, _pwd, (nsapi_ip_stack_t)_pdp_type);
     if (err) {
+        tr_error("nsapi_ppp_connect failed");
         ppp_disconnected();
     }
 
@@ -993,6 +994,7 @@ void AT_CellularContext::cellular_callback(nsapi_event_t ev, intptr_t ptr)
                 tr_info("cellular_callback: PPP mode and NSAPI_STATUS_DISCONNECTED");
                 _cb_data.error = NSAPI_ERROR_NO_CONNECTION;
                 _is_connected = false;
+                ppp_disconnected();
             }
         }
 #else
