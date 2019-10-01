@@ -18,6 +18,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <limits.h>
+#include <errno.h>
 #include "ATHandler.h"
 #include "mbed_poll.h"
 #include "FileHandle.h"
@@ -748,8 +749,7 @@ int32_t ATHandler::read_int()
     }
 
     errno = 0;
-    char *endptr;
-    long result = std::strtol(buff, &endptr, 10);
+    long result = std::strtol(buff, NULL, 10);
     if ((result == LONG_MIN || result == LONG_MAX) && errno == ERANGE) {
         return -1; // overflow/underflow
     }
@@ -1574,7 +1574,13 @@ bool ATHandler::sync(int timeout_ms)
         // especially a common response like OK could be response to previous request.
         clear_error();
         _start_time = rtos::Kernel::get_ms_count();
-        at_cmd_discard("+CMEE", "?");
+        cmd_start("AT+CMEE?");
+        cmd_stop();
+        resp_start();
+        set_stop_tag("+CMEE:");
+        consume_to_stop_tag();
+        set_stop_tag(OK);
+        consume_to_stop_tag();
         if (!_last_err) {
             _at_timeout = timeout;
             unlock();

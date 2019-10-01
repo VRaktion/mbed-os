@@ -203,7 +203,9 @@ nsapi_error_t AT_CellularDevice::get_sim_state(SimState &state)
     _at->flush();
     nsapi_error_t error = _at->at_cmd_str("+CPIN", "?", simstr, sizeof(simstr));
     ssize_t len = strlen(simstr);
+#if MBED_CONF_MBED_TRACE_ENABLE
     device_err_t err = _at->get_last_device_error();
+#endif
     _at->unlock();
 
     if (len != -1) {
@@ -623,4 +625,13 @@ void AT_CellularDevice::cellular_callback(nsapi_event_t ev, intptr_t ptr, Cellul
         }
     }
     CellularDevice::cellular_callback(ev, ptr, ctx);
+}
+
+nsapi_error_t AT_CellularDevice::clear()
+{
+    AT_CellularNetwork *net = static_cast<AT_CellularNetwork *>(open_network());
+    nsapi_error_t err = net->clear();
+    close_network();
+
+    return err;
 }

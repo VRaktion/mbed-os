@@ -28,10 +28,10 @@
 using namespace mbed;
 namespace mbed_cellular_util {
 
-void convert_ipv6(char *ip)
+nsapi_version_t convert_ipv6(char *ip)
 {
     if (!ip) {
-        return;
+        return NSAPI_UNSPEC;
     }
 
     int len = strlen(ip);
@@ -49,7 +49,11 @@ void convert_ipv6(char *ip)
 
     // more that 3 periods mean that it was ipv6 but in format of a1.a2.a3.a4.a5.a6.a7.a8.a9.a10.a11.a12.a13.a14.a15.a16
     // we need to convert it to hexadecimal format separated with colons
-    if (pos > 3) {
+    if (pos == 3) {
+
+        return NSAPI_IPv4;
+
+    } else if (pos > 3) {
         pos = 0;
         int ip_pos = 0;
         char b;
@@ -74,7 +78,11 @@ void convert_ipv6(char *ip)
                 ip[pos] = '\0';
             }
         }
+
+        return NSAPI_IPv6;
     }
+
+    return NSAPI_UNSPEC;
 }
 
 // For example "32.1.13.184.0.0.205.48.0.0.0.0.0.0.0.0"
@@ -270,11 +278,13 @@ int hex_str_to_int(const char *hex_string, int hex_string_length)
 int hex_str_to_char_str(const char *str, uint16_t len, char *buf)
 {
     int strcount = 0;
-    for (int i = 0; i + 1 < len; i += 2) {
-        char tmp;
-        hex_to_char(str + i, tmp);
-        buf[strcount] = tmp;
-        strcount++;
+    if (str && buf) {
+        for (int i = 0; i + 1 < len; i += 2) {
+            char tmp;
+            hex_to_char(str + i, tmp);
+            buf[strcount] = tmp;
+            strcount++;
+        }
     }
 
     return strcount;
@@ -282,9 +292,11 @@ int hex_str_to_char_str(const char *str, uint16_t len, char *buf)
 
 void hex_to_char(const char *hex, char &buf)
 {
-    int upper = hex_str_to_int(hex, 1);
-    int lower = hex_str_to_int(hex + 1, 1);
-    buf = ((upper << 4) & 0xF0) | (lower & 0x0F);
+    if (hex) {
+        int upper = hex_str_to_int(hex, 1);
+        int lower = hex_str_to_int(hex + 1, 1);
+        buf = ((upper << 4) & 0xF0) | (lower & 0x0F);
+    }
 }
 
 void uint_to_binary_str(uint32_t num, char *str, int str_size, int bit_cnt)
