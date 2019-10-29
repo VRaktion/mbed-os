@@ -205,16 +205,7 @@ void separate_ip_addresses(char *orig, char *ip, size_t ip_size, char *ip2, size
             }
         }
     } else {
-        temp = strstr(orig, " ");
-        // found space as separator and it wasn't in beginning --> contains 2 ip addresses
-        if (temp && temp != orig) {
-            separate_ip4like_addresses(temp++, ip2, ip2_size, NULL, 0);
-            orig[temp - orig - 1] = '\0';
-            separate_ip4like_addresses(orig, ip, ip_size, NULL, 0);
-            orig[temp - orig - 1] = ' '; // put space back to keep orig as original
-        } else {
-            separate_ip4like_addresses(orig, ip, ip_size, ip2, ip2_size);
-        }
+        separate_ip4like_addresses(orig, ip, ip_size, ip2, ip2_size);
     }
 }
 
@@ -236,7 +227,7 @@ void prefer_ipv6(char *ip, size_t ip_size, char *ip2, size_t ip2_size)
         if (temp) {
             // ipv6 was found in ip2 but not in ip ---> we must swap them. Sadly ip and ip2 might not be pointers
             // so we can't just swap them, must use copy.
-            if (strlen(ip) < ip2_size && strlen(ip2) < ip_size && strlen(ip) < 64) {
+            if (strlen(ip) < ip2_size && strlen(ip2) < ip_size && strlen(ip) < 64 && strlen(ip2) < 64) {
                 char tmp[64];
                 strncpy(tmp, ip, strlen(ip));
                 tmp[strlen(ip)] = '\0';

@@ -927,7 +927,6 @@ __asm(".global __use_no_semihosting\n\t");
 // Through weak-reference, we can check if ARM_LIB_HEAP is defined at run-time.
 // If ARM_LIB_HEAP is defined, we can fix heap allocation.
 extern MBED_WEAK uint32_t   Image$$ARM_LIB_HEAP$$ZI$$Base[];
-extern MBED_WEAK uint32_t   Image$$ARM_LIB_HEAP$$ZI$$Length[];
 extern MBED_WEAK uint32_t   Image$$ARM_LIB_HEAP$$ZI$$Limit[];
 
 // Heap here is considered starting after ZI ends to Stack start
@@ -942,7 +941,7 @@ extern "C" MBED_WEAK __value_in_regs struct __initial_stackheap _mbed_user_setup
     struct __initial_stackheap r;
 
     // Fix heap if ARM_LIB_HEAP is defined
-    if (Image$$ARM_LIB_HEAP$$ZI$$Length) {
+    if (Image$$ARM_LIB_HEAP$$ZI$$Base != Image$$ARM_LIB_HEAP$$ZI$$Limit) {
         heap_base = (uint32_t) Image$$ARM_LIB_HEAP$$ZI$$Base;
         heap_limit = (uint32_t) Image$$ARM_LIB_HEAP$$ZI$$Limit;
     }
@@ -965,7 +964,7 @@ extern "C" __value_in_regs struct __argc_argv $Sub$$__rt_lib_init(unsigned heapb
     uint32_t heap_limit = (uint32_t)Image$$ARM_LIB_STACK$$ZI$$Base;
 
     // Fix heap if ARM_LIB_HEAP is defined
-    if (Image$$ARM_LIB_HEAP$$ZI$$Length) {
+    if (Image$$ARM_LIB_HEAP$$ZI$$Base != Image$$ARM_LIB_HEAP$$ZI$$Limit) {
         heap_base = (uint32_t) Image$$ARM_LIB_HEAP$$ZI$$Base;
         heap_limit = (uint32_t) Image$$ARM_LIB_HEAP$$ZI$$Limit;
     }
@@ -1268,7 +1267,7 @@ extern "C" WEAK void __cxa_pure_virtual(void)
 extern uint32_t __mbed_sbrk_start;
 extern uint32_t __mbed_krbs_start;
 /* Additional RAM memory used for heap - please note this
- * address should be lower address then the previous default address
+ * address must be lower address then the previous default address
  */
 extern uint32_t __mbed_sbrk_start_0;
 extern uint32_t __mbed_krbs_start_0;
@@ -1276,19 +1275,18 @@ extern uint32_t __mbed_krbs_start_0;
 extern "C" WEAK caddr_t _sbrk(int incr)
 {
     static uint32_t heap = (uint32_t) &__mbed_sbrk_start_0;
-    static bool once = true;
     uint32_t prev_heap = heap;
     uint32_t new_heap = heap + incr;
 
     /**
-     * If the new address is outside the first region, start allocating from the second region.
-     * Jump to second region is done just once, and `static bool once` is used to keep track of that.
+     * If we exceed the first region, start allocating from the second region.
      */
-    if (once && (new_heap > (uint32_t) &__mbed_krbs_start_0)) {
-        once = false;
+    if (prev_heap <= (uint32_t) &__mbed_krbs_start_0 && new_heap > (uint32_t) &__mbed_krbs_start_0) {
         prev_heap = (uint32_t) &__mbed_sbrk_start;
         new_heap = prev_heap + incr;
-    } else if (new_heap > (uint32_t) &__mbed_krbs_start) {
+    }
+
+    if (new_heap > (uint32_t) &__mbed_krbs_start) {
         /**
         * If the new address is outside the second region, return out-of-memory.
         */
