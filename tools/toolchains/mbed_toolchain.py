@@ -49,6 +49,7 @@ from ..config import (ConfigException, RAM_ALL_MEMORIES, ROM_ALL_MEMORIES)
 from ..regions import (UPDATE_WHITELIST, merge_region_list)
 from ..settings import COMPARE_FIXED
 from ..settings import ARM_PATH, ARMC6_PATH, GCC_ARM_PATH, IAR_PATH
+from future.utils import with_metaclass
 
 
 TOOLCHAIN_PATHS = {
@@ -109,7 +110,7 @@ CORTEX_SYMBOLS = {
 }
 
 
-class mbedToolchain:
+class mbedToolchain(with_metaclass(ABCMeta, object)):
     OFFICIALLY_SUPPORTED = False
 
     # Verbose logging
@@ -126,8 +127,6 @@ class mbedToolchain:
     MBED_CONFIG_FILE_NAME = "mbed_config.h"
 
     PROFILE_FILE_NAME = ".profile"
-
-    __metaclass__ = ABCMeta
 
     profile_template = {'common': [], 'c': [], 'cxx': [], 'asm': [], 'ld': []}
 
@@ -556,9 +555,7 @@ class mbedToolchain:
                             ])
                         objects.append(result['object'])
                     except ToolException as err:
-                        if p._taskqueue.queue:
-                            p._taskqueue.queue.clear()
-                            sleep(0.5)
+                        # Stop the worker processes immediately without completing outstanding work
                         p.terminate()
                         p.join()
                         raise ToolException(err)
@@ -897,63 +894,56 @@ class mbedToolchain:
     def add_regions(self):
         """Add regions to the build profile, if there are any.
         """
+
+        if not getattr(self.target, "bootloader_supported", False):
+            return
+
         if self.config.has_regions:
-            try:
-                regions = list(self.config.regions)
-                regions.sort(key=lambda x: x.start)
-                self.notify.info("Using ROM region%s %s in this build." % (
-                    "s" if len(regions) > 1 else "",
-                    ", ".join(r.name for r in regions)
-                ))
-                self._add_all_regions(regions, "MBED_APP")
-            except ConfigException:
-                pass
+            regions = list(self.config.regions)
+            regions.sort(key=lambda x: x.start)
+            self.notify.info("Using ROM region%s %s in this build." % (
+                "s" if len(regions) > 1 else "",
+                ", ".join(r.name for r in regions)
+            ))
+            self._add_all_regions(regions, "MBED_APP")
 
         if self.config.has_ram_regions:
-            try:
-                regions = list(self.config.ram_regions)
-                self.notify.info("Using RAM region%s %s in this build." % (
-                    "s" if len(regions) > 1 else "",
-                    ", ".join(r.name for r in regions)
-                ))
-                self._add_all_regions(regions, None)
-            except ConfigException:
-                pass
+            regions = list(self.config.ram_regions)
+            self.notify.info("Using RAM region%s %s in this build." % (
+                "s" if len(regions) > 1 else "",
+                ", ".join(r.name for r in regions)
+            ))
+            self._add_all_regions(regions, None)
 
         Region = namedtuple("Region", "name start size")
 
-        try:
-            # Add all available ROM regions to build profile
-            if not getattr(self.target, "static_memory_defines", False):
-                raise ConfigException()
-            rom_available_regions = self.config.get_all_active_memories(
-                ROM_ALL_MEMORIES
+
+        # Add all available ROM regions to build profile
+        if not getattr(self.target, "static_memory_defines", False):
+            raise ConfigException()
+        rom_available_regions = self.config.get_all_active_memories(
+            ROM_ALL_MEMORIES
+        )
+        for key, value in rom_available_regions.items():
+            rom_start, rom_size = value
+            self._add_defines_from_region(
+                Region("MBED_" + key, rom_start, rom_size),
+                True,
+                suffixes=["_START", "_SIZE"]
             )
-            for key, value in rom_available_regions.items():
-                rom_start, rom_size = value
-                self._add_defines_from_region(
-                    Region("MBED_" + key, rom_start, rom_size),
-                    True,
-                    suffixes=["_START", "_SIZE"]
-                )
-        except ConfigException:
-            pass
-        try:
-            # Add all available RAM regions to build profile
-            if not getattr(self.target, "static_memory_defines", False):
-                raise ConfigException()
-            ram_available_regions = self.config.get_all_active_memories(
-                RAM_ALL_MEMORIES
+        # Add all available RAM regions to build profile
+        if not getattr(self.target, "static_memory_defines", False):
+            raise ConfigException()
+        ram_available_regions = self.config.get_all_active_memories(
+            RAM_ALL_MEMORIES
+        )
+        for key, value in ram_available_regions.items():
+            ram_start, ram_size = value
+            self._add_defines_from_region(
+                Region("MBED_" + key, ram_start, ram_size),
+                True,
+                suffixes=["_START", "_SIZE"]
             )
-            for key, value in ram_available_regions.items():
-                ram_start, ram_size = value
-                self._add_defines_from_region(
-                    Region("MBED_" + key, ram_start, ram_size),
-                    True,
-                    suffixes=["_START", "_SIZE"]
-                )
-        except ConfigException:
-            pass
 
     STACK_PARAM = "target.boot-stack-size"
     TFM_LVL_PARAM = "tfm.level"
@@ -1087,6 +1077,14 @@ class mbedToolchain:
             where = join(self.build_dir, self.PROFILE_FILE_NAME + "-" + key)
             self._overwrite_when_not_equal(where, json.dumps(
                 to_dump, sort_keys=True, indent=4))
+
+    def check_and_add_minimal_printf(self, target):
+        """Add toolchain flag if minimal-printf is selected."""
+        if (
+            getattr(target, "printf_lib", "std") == "minimal-printf"
+            and "-DMBED_MINIMAL_PRINTF" not in self.flags["common"]
+        ):
+            self.flags["common"].append("-DMBED_MINIMAL_PRINTF")
 
     @staticmethod
     def _overwrite_when_not_equal(filename, content):

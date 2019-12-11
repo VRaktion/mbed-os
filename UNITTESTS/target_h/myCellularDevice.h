@@ -17,12 +17,13 @@
 #ifndef MY_CELLULARDEVICE_H_
 #define MY_CELLULARDEVICE_H_
 
-#include "CellularDevice.h"
+#include "AT_CellularDevice.h"
 #include "AT_CellularNetwork.h"
 #include "FileHandle_stub.h"
 #include "ATHandler_stub.h"
 #include "AT_CellularContext.h"
 #include "gtest/gtest.h"
+#include "UARTSerial.h"
 
 using namespace events;
 
@@ -33,9 +34,9 @@ class CellularInformation;
 class CellularContext;
 class FileHandle;
 
-class myCellularDevice : public CellularDevice {
+class myCellularDevice : public AT_CellularDevice {
 public:
-    myCellularDevice(FileHandle *fh) : CellularDevice(fh), _context_list(0), _network(0) {}
+    myCellularDevice(FileHandle *fh) : AT_CellularDevice(fh), _context_list(0), _network(0) {}
     virtual ~myCellularDevice()
     {
         delete _context_list;
@@ -89,7 +90,7 @@ public:
         EventQueue que;
         FileHandle_stub fh1;
         ATHandler at(&fh1, que, 0, ",");
-        _network = new AT_CellularNetwork(at);
+        _network = new AT_CellularNetwork(at, *this);
         return _network;
     }
 
@@ -176,6 +177,10 @@ public:
     {
         return NSAPI_ERROR_OK;
     }
+    nsapi_error_t set_baud_rate(int baud_rate)
+    {
+        return NSAPI_ERROR_OK;
+    }
 
     void verify_timeout_array(const uint16_t timeout[], int array_len)
     {
@@ -193,6 +198,8 @@ public:
             EXPECT_EQ(timeout[i], get_timeouts[i]);
         }
     }
+
+
 
     AT_CellularNetwork *_network;
     AT_CellularContext *_context_list;

@@ -18,9 +18,10 @@
 #ifndef AT_CELLULAR_STACK_H_
 #define AT_CELLULAR_STACK_H_
 
-#include "AT_CellularBase.h"
+#include "ATHandler.h"
 #include "NetworkStack.h"
 #include "PlatformMutex.h"
+#include "AT_CellularDevice.h"
 
 namespace mbed {
 
@@ -35,14 +36,17 @@ namespace mbed {
  *
  * Implements NetworkStack and introduces interface for modem specific stack implementations.
  */
-class AT_CellularStack : public NetworkStack, public AT_CellularBase {
+class AT_CellularStack : public NetworkStack {
 
 public:
-    AT_CellularStack(ATHandler &at, int cid, nsapi_ip_stack_t stack_type);
+    AT_CellularStack(ATHandler &at, int cid, nsapi_ip_stack_t stack_type, AT_CellularDevice &device);
     virtual ~AT_CellularStack();
 
 public: // NetworkStack
 
+    virtual nsapi_error_t get_ip_address(SocketAddress *address);
+
+    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
     virtual const char *get_ip_address();
 
     /**
@@ -109,7 +113,6 @@ protected:
             closed(false),
             started(false),
             tx_ready(false),
-            rx_avail(false),
             tls_socket(false),
             pending_bytes(0)
         {
@@ -127,7 +130,6 @@ protected:
         bool closed; // socket has been closed by a peer
         bool started; // socket has been opened on modem stack
         bool tx_ready; // socket is ready for sending on modem stack
-        bool rx_avail; // socket has data for reading on modem stack
         bool tls_socket; // socket uses modem's internal TLS socket functionality
         nsapi_size_t pending_bytes; // The number of received bytes pending
     };
@@ -231,6 +233,11 @@ private:
 
     // mutex for write/read to a _socket array, needed when multiple threads may open sockets simultaneously
     PlatformMutex _socket_mutex;
+
+protected:
+    ATHandler &_at;
+
+    AT_CellularDevice &_device;
 };
 
 } // namespace mbed

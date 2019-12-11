@@ -43,7 +43,7 @@ from tools.utils import argparse_dir_not_parent
 from tools.utils import print_end_warnings
 from tools.settings import ROOT
 from tools.targets import Target
-from tools.psa import generate_psa_sources, clean_psa_autogen
+from tools.psa import generate_psa_sources
 from tools.resources import OsAndSpeResourceFilter, SpeOnlyResourceFilter
 
 def main():
@@ -220,10 +220,6 @@ def main():
             print_tests(tests, options.format)
             sys.exit(0)
         else:
-
-            if options.clean:
-                clean_psa_autogen()
-
             # Build all tests
             if not options.build_dir:
                 args_error(parser, "argument --build is required")
@@ -243,8 +239,6 @@ def main():
                 resource_filter = None
                 if target.is_PSA_secure_target:
                     resource_filter = OsAndSpeResourceFilter()
-
-                if target.is_PSA_target:
                     generate_psa_sources(
                         source_dirs=base_source_paths,
                         ignore_paths=[options.build_dir]
@@ -318,7 +312,7 @@ def main():
 
             # Print memory map summary on screen
             if build_report:
-                print
+                print()
                 print(print_build_memory_usage(build_report))
 
             print_report_exporter = ReportExporter(ResultExporterType.PRINT, package="build")

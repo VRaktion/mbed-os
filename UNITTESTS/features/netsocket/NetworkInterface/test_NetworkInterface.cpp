@@ -77,20 +77,20 @@ TEST_F(TestNetworkInterface, get_mac_address)
 
 TEST_F(TestNetworkInterface, get_ip_address)
 {
-    char *n = 0;
-    EXPECT_EQ(iface->get_ip_address(), n);
+    SocketAddress addr;
+    EXPECT_EQ(iface->get_ip_address(&addr), NSAPI_ERROR_UNSUPPORTED);
 }
 
 TEST_F(TestNetworkInterface, get_netmask)
 {
-    char *n = 0;
-    EXPECT_EQ(iface->get_netmask(), n);
+    SocketAddress addr;
+    EXPECT_EQ(iface->get_netmask(&addr), NSAPI_ERROR_UNSUPPORTED);
 }
 
 TEST_F(TestNetworkInterface, get_gateway)
 {
-    char *n = 0;
-    EXPECT_EQ(iface->get_gateway(), n);
+    SocketAddress addr;
+    EXPECT_EQ(iface->get_gateway(&addr), NSAPI_ERROR_UNSUPPORTED);
 }
 
 TEST_F(TestNetworkInterface, get_interface_name)
@@ -146,6 +146,12 @@ TEST_F(TestNetworkInterface, get_connection_status)
 TEST_F(TestNetworkInterface, set_blocking)
 {
     EXPECT_EQ(iface->set_blocking(true), NSAPI_ERROR_UNSUPPORTED);
+}
+
+TEST_F(TestNetworkInterface, get_ipv6_link_local_address)
+{
+    SocketAddress a;
+    EXPECT_EQ(iface->get_ipv6_link_local_address(&a), NSAPI_ERROR_UNSUPPORTED);
 }
 
 void my_iface_callback(nsapi_event_t e, intptr_t i)
