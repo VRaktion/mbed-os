@@ -50,6 +50,8 @@ typedef enum {
     PIN_OUTPUT
 } PinDirection;
 
+#define PORT_SHIFT  3
+
 typedef enum {
     p0  = 0,
     p1  = 1,
@@ -119,15 +121,15 @@ typedef enum {
     P0_29 = p29,
     P0_30 = p30,
 
-    LED1 = p11,
-    LED2 = p11,
-    LED3 = p11,
-    LED4 = p11,
+    LED1 = p8,
+    LED2 = p8,
+    LED3 = p8,
+    LED4 = p8,
 
-    RX_PIN_NUMBER  = p30,
-    TX_PIN_NUMBER  = p29,
-    CTS_PIN_NUMBER = p28,
-    RTS_PIN_NUMBER = p2,
+    RX_PIN_NUMBER  = p19,
+    TX_PIN_NUMBER  = p17,
+    CTS_PIN_NUMBER = p18,
+    RTS_PIN_NUMBER = p20,
     STDIO_UART_TX = TX_PIN_NUMBER,
     STDIO_UART_RX = RX_PIN_NUMBER,
     STDIO_UART_CTS = CTS_PIN_NUMBER,
@@ -137,23 +139,26 @@ typedef enum {
     USBTX = TX_PIN_NUMBER,
     USBRX = RX_PIN_NUMBER,
 
-    SPI_PSELMOSI0 = p6,
-    SPI_PSELMISO0 = p7,
-    SPI_PSELSS0   = p3,
-    SPI_PSELSCK0  = p8,
+    SPI_PSELMOSI0 = p22,
+    SPI_PSELMISO0 = p23,
+    SPI_PSELSS0   = p24,
+    SPI_PSELSCK0  = p25,
 
-    SPI_PSELMOSI1 = p29,
-    SPI_PSELMISO1 = p30,
-    SPI_PSELSS1   = p28,
-    SPI_PSELSCK1  = p2,
+    SPI_PSELMOSI1 = p22,
+    SPI_PSELMISO1 = p23,
+    SPI_PSELSS1   = p24,
+    SPI_PSELSCK1  = p25,
 
-    SPIS_PSELMOSI = p29,
-    SPIS_PSELMISO = p30,
-    SPIS_PSELSS   = p28,
-    SPIS_PSELSCK  = p2,
+    SPIS_PSELMOSI = p22,
+    SPIS_PSELMISO = p23,
+    SPIS_PSELSS   = p24,
+    SPIS_PSELSCK  = p25,
 
-    I2C_SDA0 = p28,
-    I2C_SCL0 = p2,
+    I2C_SDA0 = p6,
+    I2C_SCL0 = p7,
+
+    I2C_SDA1 = p12,
+    I2C_SCL1 = p13,
 
     D0 = p30,
     D1 = p29,
